@@ -199,6 +199,25 @@ body {
 .mini-btn { background: none; border: none; color: var(--text); font-size: 1.1rem; cursor: pointer; padding: 4px; flex-shrink: 0; }
 
 /* ── keyframes ── */
+@keyframes mpEq {
+  0% { height: 3px; }
+  100% { height: 14px; }
+}
+#miniPill {
+  position: fixed; z-index: 10000; right: 14px; bottom: 100px;
+  background: rgba(30,28,36,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-radius: 28px; padding: 5px 14px 5px 5px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.08);
+  display: none; align-items: center; gap: 8px; cursor: pointer;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+#miniPill .pill-cover { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: rgba(255,255,255,0.08); }
+#miniPill .pill-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#miniPill .pill-title { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+#miniPill .pill-artist { font-size: 0.6rem; color: rgba(255,255,255,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-top: 1px; }
+#miniPill .pill-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; margin-left: 2px; }
+#miniPill .mp-eq-bar { width: 2px; background: rgba(255,255,255,0.5); border-radius: 1px; }
+
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes disc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
@@ -237,6 +256,7 @@ body {
         <button onclick="closeLyricPlayer()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.6);font-size:1rem;padding:8px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;">✕</button>
         <div style="display:flex;gap:8px;">
           <button onclick="togglePlaylistBrowser()" style="background:rgba(255,255,255,0.08);border:none;border-radius:20px;color:rgba(255,255,255,0.65);font-size:0.68rem;padding:5px 11px;cursor:pointer;">≡ 歌单</button>
+          <button id="lpAnalysisBtn" onclick="toggleAnalysisPanel()" style="background:rgba(255,255,255,0.08);border:none;border-radius:20px;color:rgba(255,255,255,0.65);font-size:0.68rem;padding:5px 11px;cursor:pointer;">✧ 听感</button>
         </div>
       </div>
 
@@ -286,6 +306,13 @@ body {
         </div>
       </div>
 
+      <!-- Analysis panel -->
+      <div id="lpAnalysisPanel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:20;background:rgba(0,0,0,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:60px 24px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <button onclick="toggleAnalysisPanel()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.2rem;cursor:pointer;padding:8px;">✕</button>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.35);letter-spacing:0.1em;margin-bottom:12px;">✧ 听感</div>
+        <div id="lpAnalysisContent" style="color:rgba(255,255,255,0.75);font-size:0.85rem;line-height:1.7;white-space:pre-wrap;"></div>
+      </div>
+
       <!-- Lyrics -->
       <div id="lpLyrics" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;">
         <div id="lpLyricsInner"></div>
@@ -302,19 +329,17 @@ body {
   </div>
 </div>
 
-<!-- ── Mini Player ── -->
-<div id="miniPlayer" onclick="openLyricPlayerFromMini()">
-  <div class="mini-progress-bar"><div id="miniProgressFill" class="mini-progress-fill"></div></div>
-  <div class="mini-inner">
-    <div class="mini-disc">
-      <img id="miniPlayerCover" src="">
-      <div id="miniPlayerDiscAnim" class="mini-disc-spin"></div>
-    </div>
-    <div class="mini-info">
-      <div id="miniPlayerTitle" class="mini-title">—</div>
-      <div id="miniPlayerArtist" class="mini-artist">—</div>
-    </div>
-    <button class="mini-btn" onclick="event.stopPropagation();miniPlayerToggle();" id="miniPlayerBtn">▶</button>
+<!-- ── Floating Pill Player ── -->
+<div id="miniPill">
+  <div class="pill-cover"><img id="miniPillCover" src=""></div>
+  <div style="max-width:100px;overflow:hidden;">
+    <div id="miniPillTitle" class="pill-title">—</div>
+    <div id="miniPillArtist" class="pill-artist">—</div>
+  </div>
+  <div class="pill-eq">
+    <span class="mp-eq-bar" style="height:4px;animation:mpEq 0.8s ease-in-out infinite alternate;"></span>
+    <span class="mp-eq-bar" style="height:8px;animation:mpEq 0.6s ease-in-out infinite alternate 0.2s;"></span>
+    <span class="mp-eq-bar" style="height:5px;animation:mpEq 0.7s ease-in-out infinite alternate 0.4s;"></span>
   </div>
 </div>
 
@@ -697,25 +722,108 @@ function _lpAutoNext() {
 }
 
 // ── Mini Player ──
+// ── Floating Pill: drag + tap ──
+(function(){
+  var pill, _dragging=false, _moved=false, _sx, _sy, _ox, _oy;
+  function init(){
+    pill = document.getElementById('miniPill');
+    if(!pill) return;
+    pill.addEventListener('touchstart', onDown, {passive:false});
+    pill.addEventListener('mousedown', onDown);
+  }
+  function onDown(e){
+    _dragging=true; _moved=false;
+    var t=e.touches?e.touches[0]:e;
+    var r=pill.getBoundingClientRect();
+    _sx=t.clientX; _sy=t.clientY; _ox=r.left; _oy=r.top;
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchend', onUp);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!_dragging) return;
+    var t=e.touches?e.touches[0]:e;
+    var dx=t.clientX-_sx, dy=t.clientY-_sy;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) _moved=true;
+    pill.style.right='auto'; pill.style.bottom='auto';
+    pill.style.left=Math.max(0,Math.min(window.innerWidth-pill.offsetWidth,_ox+dx))+'px';
+    pill.style.top=Math.max(0,Math.min(window.innerHeight-pill.offsetHeight,_oy+dy))+'px';
+    e.preventDefault();
+  }
+  function onUp(){
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('touchend',onUp);
+    document.removeEventListener('mouseup',onUp);
+    if(_dragging&&!_moved&&typeof openLyricPlayerFromMini==='function') openLyricPlayerFromMini();
+    if(_moved){
+      var r=pill.getBoundingClientRect();
+      if(r.left+r.width/2<window.innerWidth/2){pill.style.left='10px';pill.style.right='auto';}
+      else{pill.style.left='auto';pill.style.right='10px';}
+    }
+    _dragging=false;
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+
 function _miniSync() {
-  var mp = document.getElementById('miniPlayer');
-  if (!mp) return;
+  var pill = document.getElementById('miniPill');
+  if (!pill) return;
   var alive = window._lpAudio && !window._lpAudio.ended;
-  mp.classList.toggle('visible', !!alive);
-  if (!alive) return;
-  document.getElementById('miniPlayerTitle').textContent = _lp.name || '—';
-  document.getElementById('miniPlayerArtist').textContent = _lp.artist || '—';
-  var c = document.getElementById('miniPlayerCover');
-  if (_lp.pic && c.src !== _lp.pic) c.src = _lp.pic;
+  var lpVis = document.getElementById('lyricPlayer') && document.getElementById('lyricPlayer').classList.contains('open');
+  if (!alive || lpVis) { pill.style.display = 'none'; return; }
+  pill.style.display = 'flex';
+  if (_lp) {
+    var dt = _lp.name || '', da = _lp.artist || '', dp = _lp.pic || '';
+    if (!dp) { var cv = document.getElementById('lpCover'); if (cv && cv.src && cv.src.startsWith('http')) dp = cv.src; }
+    var pt = document.getElementById('miniPillTitle'), pa = document.getElementById('miniPillArtist'), pc = document.getElementById('miniPillCover');
+    if (dt && pt) pt.textContent = dt;
+    if (da && pa) pa.textContent = da;
+    if (dp && pc && pc.src !== dp) pc.src = dp;
+  }
+  var bars = pill.querySelectorAll('.mp-eq-bar');
   var playing = !window._lpAudio.paused;
-  document.getElementById('miniPlayerBtn').textContent = playing ? '⏸' : '▶';
-  document.getElementById('miniPlayerDiscAnim').style.animationPlayState = playing ? 'running' : 'paused';
+  bars.forEach(function(b){ b.style.animationPlayState = playing ? 'running' : 'paused'; });
 }
-setInterval(_miniSync, 800);
+setInterval(_miniSync, 500);
+
+// ── AI Song Analysis ──
+var _analysisCache = {};
+window.toggleAnalysisPanel = function() {
+  var panel = document.getElementById('lpAnalysisPanel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  var sid = String(_lp.id || '');
+  if (!sid) { document.getElementById('lpAnalysisContent').textContent = 'No song playing'; return; }
+  if (_analysisCache[sid]) { document.getElementById('lpAnalysisContent').textContent = _analysisCache[sid]; return; }
+  document.getElementById('lpAnalysisContent').innerHTML = '<div style="color:rgba(255,255,255,0.35);">Analyzing this song...</div>';
+  fetch(API + '/song-analysis?id=' + sid, {headers:{'Authorization':'Bearer '+AUTH}})
+  .then(function(r){return r.json();}).then(function(d){
+    if (d.ok && d.text) {
+      _analysisCache[sid] = d.text; document.getElementById('lpAnalysisContent').textContent = d.text;
+      var btn = document.getElementById('lpAnalysisBtn'); if(btn) btn.style.background='rgba(255,255,255,0.18)';
+    } else {
+      var lrc = ''; if (_lp.lines && _lp.lines.length) lrc = _lp.lines.map(function(l){ var m=Math.floor(l.t/60),s=Math.floor(l.t%60); return '['+m+':'+(s<10?'0':'')+s+']'+l.text; }).join('\n');
+      fetch(API+'/song-analysis',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+AUTH},body:JSON.stringify({id:sid,title:_lp.name||'',artist:_lp.artist||'',lrc:lrc})})
+      .then(function(r){return r.json();}).then(function(d2){
+        if(d2.ok&&d2.text){_analysisCache[sid]=d2.text;document.getElementById('lpAnalysisContent').textContent=d2.text;}
+        else{document.getElementById('lpAnalysisContent').textContent=d2.error||'Analysis failed';}
+      }).catch(function(e){document.getElementById('lpAnalysisContent').textContent='Error: '+e.message;});
+    }
+  }).catch(function(e){document.getElementById('lpAnalysisContent').textContent='Error: '+e.message;});
+};
+
 
 window.openLyricPlayerFromMini = function() {
-  if (!_lp.id) return;
-  openLyricPlayer(_lp.id, _lp.name, _lp.artist, _lp.pic, '');
+  var id = _lp && _lp.id;
+  if (!id) return;
+  var title = _lp.name || document.getElementById("miniPillTitle").textContent || "";
+  var artist = _lp.artist || document.getElementById("miniPillArtist").textContent || "";
+  var cover = _lp.pic || document.getElementById("miniPillCover").src || "";
+  openLyricPlayer(id, title, artist, cover, "");
 };
 
 window.miniPlayerToggle = function() {
