@@ -7,8 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Elle & Matt",
+  "license": "MIT",
   "dependencies": {
     "NeteaseCloudMusicApi": "^4.32.0"
   }
