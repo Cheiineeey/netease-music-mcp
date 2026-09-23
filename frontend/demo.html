@@ -256,7 +256,6 @@ body {
         <button onclick="closeLyricPlayer()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.6);font-size:1rem;padding:8px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;">✕</button>
         <div style="display:flex;gap:8px;">
           <button onclick="togglePlaylistBrowser()" style="background:rgba(255,255,255,0.08);border:none;border-radius:20px;color:rgba(255,255,255,0.65);font-size:0.68rem;padding:5px 11px;cursor:pointer;">≡ 歌单</button>
-          <button id="lpAnalysisBtn" onclick="toggleAnalysisPanel()" style="background:rgba(255,255,255,0.08);border:none;border-radius:20px;color:rgba(255,255,255,0.65);font-size:0.68rem;padding:5px 11px;cursor:pointer;">✧ 听感</button>
         </div>
       </div>
 
@@ -304,13 +303,6 @@ body {
           <img id="lpCover" src="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:none;">
           <div style="position:absolute;width:12px;height:12px;border-radius:50%;background:#111;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
         </div>
-      </div>
-
-      <!-- Analysis panel -->
-      <div id="lpAnalysisPanel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:20;background:rgba(0,0,0,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:60px 24px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
-        <button onclick="toggleAnalysisPanel()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.2rem;cursor:pointer;padding:8px;">✕</button>
-        <div style="font-size:0.72rem;color:rgba(255,255,255,0.35);letter-spacing:0.1em;margin-bottom:12px;">✧ 听感</div>
-        <div id="lpAnalysisContent" style="color:rgba(255,255,255,0.75);font-size:0.85rem;line-height:1.7;white-space:pre-wrap;"></div>
       </div>
 
       <!-- Lyrics -->
@@ -788,34 +780,6 @@ function _miniSync() {
   bars.forEach(function(b){ b.style.animationPlayState = playing ? 'running' : 'paused'; });
 }
 setInterval(_miniSync, 500);
-
-// ── AI Song Analysis ──
-var _analysisCache = {};
-window.toggleAnalysisPanel = function() {
-  var panel = document.getElementById('lpAnalysisPanel');
-  if (!panel) return;
-  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  var sid = String(_lp.id || '');
-  if (!sid) { document.getElementById('lpAnalysisContent').textContent = 'No song playing'; return; }
-  if (_analysisCache[sid]) { document.getElementById('lpAnalysisContent').textContent = _analysisCache[sid]; return; }
-  document.getElementById('lpAnalysisContent').innerHTML = '<div style="color:rgba(255,255,255,0.35);">Analyzing this song...</div>';
-  fetch(API + '/song-analysis?id=' + sid, {headers:{'Authorization':'Bearer '+AUTH}})
-  .then(function(r){return r.json();}).then(function(d){
-    if (d.ok && d.text) {
-      _analysisCache[sid] = d.text; document.getElementById('lpAnalysisContent').textContent = d.text;
-      var btn = document.getElementById('lpAnalysisBtn'); if(btn) btn.style.background='rgba(255,255,255,0.18)';
-    } else {
-      var lrc = ''; if (_lp.lines && _lp.lines.length) lrc = _lp.lines.map(function(l){ var m=Math.floor(l.t/60),s=Math.floor(l.t%60); return '['+m+':'+(s<10?'0':'')+s+']'+l.text; }).join('\n');
-      fetch(API+'/song-analysis',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+AUTH},body:JSON.stringify({id:sid,title:_lp.name||'',artist:_lp.artist||'',lrc:lrc})})
-      .then(function(r){return r.json();}).then(function(d2){
-        if(d2.ok&&d2.text){_analysisCache[sid]=d2.text;document.getElementById('lpAnalysisContent').textContent=d2.text;}
-        else{document.getElementById('lpAnalysisContent').textContent=d2.error||'Analysis failed';}
-      }).catch(function(e){document.getElementById('lpAnalysisContent').textContent='Error: '+e.message;});
-    }
-  }).catch(function(e){document.getElementById('lpAnalysisContent').textContent='Error: '+e.message;});
-};
-
 
 window.openLyricPlayerFromMini = function() {
   var id = _lp && _lp.id;
