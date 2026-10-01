@@ -259,13 +259,17 @@ Elle 某天晚上想听歌，觉得让 AI 直接放比发链接好用多了。�
 
 搭着搭着加了歌词、加了拖动、加了歌单、加了键盘弹出不跳的处理、加了悬浮播放球……
 
-后来觉得，这个东西可以给更多人用。所以开源了。
+后来觉得，这个东西可以给更多人用。所以把源码公开了。
 
 ---
 
 ## License
 
-[GNU AGPL v3.0](LICENSE)
+- 代码：[PolyForm Noncommercial 1.0.0](LICENSE)，允许个人学习、研究和其他非商业用途。
+- README、教程与截图：[CC BY-NC 4.0](LICENSE-CONTENT)。
+- 商业使用须另行取得书面授权，请联系 [Cheiineeey](https://github.com/Cheiineeey)。
+
+适用范围与旧版本说明见 [LICENSING.md](LICENSING.md)。
 
 ---
 

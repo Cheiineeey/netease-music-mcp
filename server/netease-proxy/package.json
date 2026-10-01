@@ -8,7 +8,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SEE LICENSE IN ../../LICENSE",
   "dependencies": {
     "NeteaseCloudMusicApi": "^4.32.0"
   }
